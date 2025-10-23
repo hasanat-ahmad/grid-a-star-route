@@ -12,6 +12,8 @@ export interface Cell {
 
 export type Mode = 'start' | 'target' | 'wall';
 
+export type AlgorithmType = 'bfs' | 'dfs' | 'greedy';
+
 export interface GridState {
   grid: Cell[][];
   start: { row: number; col: number } | null;

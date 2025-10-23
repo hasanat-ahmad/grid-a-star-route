@@ -1,4 +1,4 @@
-import { Cell, CellType } from '@/types/grid';
+import { Cell, AlgorithmType } from '@/types/grid';
 
 // Heuristic function (Manhattan distance)
 const heuristic = (cell: Cell, target: Cell): number => {
@@ -43,11 +43,137 @@ export interface PathfindingResult {
   found: boolean;
 }
 
-// A* Algorithm implementation
+// Breadth-First Search (BFS) - Guarantees shortest path
+const bfs = (
+  grid: Cell[][],
+  start: Cell,
+  target: Cell
+): PathfindingResult => {
+  const queue: Cell[] = [start];
+  const visited: Cell[] = [];
+  const visitedSet: Set<string> = new Set([`${start.row},${start.col}`]);
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    visited.push(current);
+
+    if (current.row === target.row && current.col === target.col) {
+      return {
+        path: reconstructPath(current),
+        visited,
+        found: true,
+      };
+    }
+
+    const neighbors = getNeighbors(current, grid);
+    for (const neighbor of neighbors) {
+      const key = `${neighbor.row},${neighbor.col}`;
+      if (neighbor.type !== 'wall' && !visitedSet.has(key)) {
+        neighbor.parent = current;
+        visitedSet.add(key);
+        queue.push(neighbor);
+      }
+    }
+  }
+
+  return { path: [], visited, found: false };
+};
+
+// Depth-First Search (DFS) - Does not guarantee shortest path
+const dfs = (
+  grid: Cell[][],
+  start: Cell,
+  target: Cell
+): PathfindingResult => {
+  const stack: Cell[] = [start];
+  const visited: Cell[] = [];
+  const visitedSet: Set<string> = new Set([`${start.row},${start.col}`]);
+
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    visited.push(current);
+
+    if (current.row === target.row && current.col === target.col) {
+      return {
+        path: reconstructPath(current),
+        visited,
+        found: true,
+      };
+    }
+
+    const neighbors = getNeighbors(current, grid);
+    for (const neighbor of neighbors) {
+      const key = `${neighbor.row},${neighbor.col}`;
+      if (neighbor.type !== 'wall' && !visitedSet.has(key)) {
+        neighbor.parent = current;
+        visitedSet.add(key);
+        stack.push(neighbor);
+      }
+    }
+  }
+
+  return { path: [], visited, found: false };
+};
+
+// Greedy Best-First Search - Uses heuristic only
+const greedy = (
+  grid: Cell[][],
+  start: Cell,
+  target: Cell
+): PathfindingResult => {
+  const openSet: Cell[] = [start];
+  const closedSet: Set<string> = new Set();
+  const visited: Cell[] = [];
+
+  start.h = heuristic(start, target);
+
+  while (openSet.length > 0) {
+    // Find cell with lowest h score (heuristic only)
+    let current = openSet[0];
+    let currentIndex = 0;
+
+    for (let i = 1; i < openSet.length; i++) {
+      if (openSet[i].h < current.h) {
+        current = openSet[i];
+        currentIndex = i;
+      }
+    }
+
+    if (current.row === target.row && current.col === target.col) {
+      return {
+        path: reconstructPath(current),
+        visited,
+        found: true,
+      };
+    }
+
+    openSet.splice(currentIndex, 1);
+    closedSet.add(`${current.row},${current.col}`);
+    visited.push(current);
+
+    const neighbors = getNeighbors(current, grid);
+    for (const neighbor of neighbors) {
+      if (neighbor.type === 'wall' || closedSet.has(`${neighbor.row},${neighbor.col}`)) {
+        continue;
+      }
+
+      if (!openSet.includes(neighbor)) {
+        neighbor.parent = current;
+        neighbor.h = heuristic(neighbor, target);
+        openSet.push(neighbor);
+      }
+    }
+  }
+
+  return { path: [], visited, found: false };
+};
+
+// Main pathfinding function that routes to the selected algorithm
 export const findPath = (
   grid: Cell[][],
   startPos: { row: number; col: number },
-  targetPos: { row: number; col: number }
+  targetPos: { row: number; col: number },
+  algorithm: AlgorithmType = 'bfs'
 ): PathfindingResult => {
   // Reset grid costs
   for (let row of grid) {
@@ -62,70 +188,14 @@ export const findPath = (
   const start = grid[startPos.row][startPos.col];
   const target = grid[targetPos.row][targetPos.col];
 
-  const openSet: Cell[] = [start];
-  const closedSet: Set<string> = new Set();
-  const visited: Cell[] = [];
-
-  start.g = 0;
-  start.h = heuristic(start, target);
-  start.f = start.h;
-
-  while (openSet.length > 0) {
-    // Find cell with lowest f score
-    let current = openSet[0];
-    let currentIndex = 0;
-
-    for (let i = 1; i < openSet.length; i++) {
-      if (openSet[i].f < current.f) {
-        current = openSet[i];
-        currentIndex = i;
-      }
-    }
-
-    // Check if we reached the target
-    if (current.row === target.row && current.col === target.col) {
-      return {
-        path: reconstructPath(current),
-        visited,
-        found: true,
-      };
-    }
-
-    // Move current from open to closed set
-    openSet.splice(currentIndex, 1);
-    closedSet.add(`${current.row},${current.col}`);
-    visited.push(current);
-
-    // Check all neighbors
-    const neighbors = getNeighbors(current, grid);
-
-    for (const neighbor of neighbors) {
-      // Skip if neighbor is a wall or already evaluated
-      if (neighbor.type === 'wall' || closedSet.has(`${neighbor.row},${neighbor.col}`)) {
-        continue;
-      }
-
-      const tentativeG = current.g + 1; // Cost is 1 per step
-
-      if (tentativeG < neighbor.g) {
-        // This path to neighbor is better
-        neighbor.parent = current;
-        neighbor.g = tentativeG;
-        neighbor.h = heuristic(neighbor, target);
-        neighbor.f = neighbor.g + neighbor.h;
-
-        // Add to open set if not already there
-        if (!openSet.includes(neighbor)) {
-          openSet.push(neighbor);
-        }
-      }
-    }
+  switch (algorithm) {
+    case 'bfs':
+      return bfs(grid, start, target);
+    case 'dfs':
+      return dfs(grid, start, target);
+    case 'greedy':
+      return greedy(grid, start, target);
+    default:
+      return bfs(grid, start, target);
   }
-
-  // No path found
-  return {
-    path: [],
-    visited,
-    found: false,
-  };
 };

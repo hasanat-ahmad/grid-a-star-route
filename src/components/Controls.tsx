@@ -1,12 +1,14 @@
-import { Mode } from '@/types/grid';
+import { Mode, AlgorithmType } from '@/types/grid';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Play, RotateCcw, MapPin, Target, Square } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface ControlsProps {
   mode: Mode;
+  algorithm: AlgorithmType;
   onModeChange: (mode: Mode) => void;
+  onAlgorithmChange: (algorithm: AlgorithmType) => void;
   onStartPathfinding: () => void;
   onClearGrid: () => void;
   isRunning: boolean;
@@ -17,7 +19,9 @@ interface ControlsProps {
 
 const Controls = ({
   mode,
+  algorithm,
   onModeChange,
+  onAlgorithmChange,
   onStartPathfinding,
   onClearGrid,
   isRunning,
@@ -31,13 +35,39 @@ const Controls = ({
     { value: 'wall', label: 'Draw Walls', icon: <Square className="w-4 h-4" /> },
   ];
 
+  const algorithms: { value: AlgorithmType; label: string; description: string }[] = [
+    { value: 'bfs', label: 'BFS', description: 'Breadth-First Search' },
+    { value: 'dfs', label: 'DFS', description: 'Depth-First Search' },
+    { value: 'greedy', label: 'Greedy', description: 'Greedy Best-First' },
+  ];
+
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle>Controls</CardTitle>
-        <CardDescription>Click on the grid to place start, target, and walls</CardDescription>
+        <CardDescription>Choose algorithm and configure the grid</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Algorithm Selection */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Algorithm:</label>
+          <Select value={algorithm} onValueChange={onAlgorithmChange} disabled={isRunning || isComplete}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {algorithms.map((alg) => (
+                <SelectItem key={alg.value} value={alg.value}>
+                  <div className="flex flex-col">
+                    <span className="font-semibold">{alg.label}</span>
+                    <span className="text-xs text-muted-foreground">{alg.description}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Mode Selection */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Mode:</label>

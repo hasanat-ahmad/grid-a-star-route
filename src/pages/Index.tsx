@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import MapGrid from '@/components/MapGrid';
 import Controls from '@/components/Controls';
-import { Cell, Mode, GridState } from '@/types/grid';
+import { Cell, Mode, GridState, AlgorithmType } from '@/types/grid';
 import { findPath } from '@/utils/pathfinding';
 import { useToast } from '@/hooks/use-toast';
 
@@ -36,6 +36,7 @@ const Index = () => {
     isComplete: false,
   });
   const [mode, setMode] = useState<Mode>('start');
+  const [algorithm, setAlgorithm] = useState<AlgorithmType>('bfs');
   const [pathLength, setPathLength] = useState(0);
   const [visitedCount, setVisitedCount] = useState(0);
   const { toast } = useToast();
@@ -97,8 +98,8 @@ const Index = () => {
       }))
     );
 
-    // Run A* algorithm
-    const result = findPath(clearedGrid, gridState.start, gridState.target);
+    // Run selected algorithm
+    const result = findPath(clearedGrid, gridState.start, gridState.target, algorithm);
 
     if (!result.found) {
       toast({
@@ -152,7 +153,7 @@ const Index = () => {
       title: 'Path Found!',
       description: `Found path with ${result.path.length} steps`,
     });
-  }, [gridState.grid, gridState.start, gridState.target, toast]);
+  }, [gridState.grid, gridState.start, gridState.target, algorithm, toast]);
 
   const handleClearGrid = useCallback(() => {
     setGridState({
@@ -176,7 +177,7 @@ const Index = () => {
             Smart Route Finder
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Visualize the A* pathfinding algorithm to find the shortest route between two points
+            Compare BFS, DFS, and Greedy Best-First Search algorithms for pathfinding
           </p>
         </div>
 
@@ -186,7 +187,9 @@ const Index = () => {
           <div className="w-full max-w-md order-2 lg:order-1">
             <Controls
               mode={mode}
+              algorithm={algorithm}
               onModeChange={setMode}
+              onAlgorithmChange={setAlgorithm}
               onStartPathfinding={handleStartPathfinding}
               onClearGrid={handleClearGrid}
               isRunning={gridState.isRunning}
@@ -209,7 +212,7 @@ const Index = () => {
         {/* Footer Info */}
         <div className="mt-12 text-center">
           <p className="text-sm text-muted-foreground">
-            Using A* (A-Star) pathfinding algorithm with Manhattan distance heuristic
+            Select different algorithms to compare their behavior: BFS guarantees shortest path, DFS explores depth-first, Greedy uses heuristics
           </p>
         </div>
       </div>
